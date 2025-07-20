@@ -37,12 +37,37 @@ async function run() {
     const submissionCollection = client.db('eduDb').collection('submission');
     const assignmentCollection = client.db('eduDb').collection('assignment');
 
+    // user api
+    app.get('/user/:email', async (req, res) => {
+        const email = req.params.email;
+        const query = { 
+            email: email,
+        };
+        const result = await userCollection.findOne(query);
+        res.send(result);
+    });
+
+    app.post('/user', async (req, res) => {
+        const user = req.body;
+        const query = {
+            email: user.email,
+        };
+        const existingUser = await userCollection.findOne(query);
+        if(existingUser)
+            return res.send({
+                message: 'user already exists',
+                insertedId: null,
+            });
+        const result = await userCollection.insertOne(user);
+        res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
