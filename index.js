@@ -10,7 +10,10 @@ app.use(cors());
 app.use(express.json());
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const {
+  MongoClient,
+  ServerApiVersion
+} = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_KEY}@cluster0.bk0nm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -39,31 +42,64 @@ async function run() {
 
     // user api
     app.get('/user/:email', async (req, res) => {
-        const email = req.params.email;
-        const query = { 
-            email: email,
-        };
-        const result = await userCollection.findOne(query);
-        res.send(result);
+      const email = req.params.email;
+      const query = {
+        email: email,
+      };
+      const result = await userCollection.findOne(query);
+      res.send(result);
     });
 
     app.post('/user', async (req, res) => {
-        const user = req.body;
-        const query = {
-            email: user.email,
-        };
-        const existingUser = await userCollection.findOne(query);
-        if(existingUser)
-            return res.send({
-                message: 'user already exists',
-                insertedId: null,
-            });
-        const result = await userCollection.insertOne(user);
-        res.send(result);
+      const user = req.body;
+      const query = {
+        email: user.email,
+      };
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser)
+        return res.send({
+          message: 'user already exists',
+          insertedId: null,
+        });
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    // feedback api
+    app.get('/feedback', async (req, res) => {
+      const result = await feedbackCollection.aggregate([{
+          $lookup: {
+            from: 'user',
+            localField: 'studentId',
+            foreignField: '_id',
+            as: 'studentInfo'
+          }
+        },
+        {
+          $lookup: {
+            from: 'class',
+            localField: 'classId',
+            foreignField: '_id',
+            as: 'classInfo'
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            name: '$studentInfo.name',
+            photoUrl: '$studentInfo.photoUrl',
+            feedbackText: 1,
+            title: '$classInfo.title'
+          }
+        }
+      ]).toArray();
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    await client.db("admin").command({
+      ping: 1
+    });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
@@ -76,5 +112,5 @@ run().catch(console.dir);
 app.get('/', async (req, res) => res.send('server is running'));
 
 app.listen(port, () => {
-    console.log(`Listening port is ${port}`);
+  console.log(`Listening port is ${port}`);
 });
