@@ -106,6 +106,14 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/allClasses', async (req, res) => {
+      const query = {
+        status: 'accepted',
+      };
+      const result = await classCollection.find(query).toArray();
+      res.send(result);
+    });
+
     // totalCount api
     app.get('/totalCount', async (req, res) => {
       const totalClass = await classCollection.estimatedDocumentCount();
