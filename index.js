@@ -36,7 +36,7 @@ async function run() {
     const feedbackCollection = client.db('eduDb').collection('feedback');
     const teacherRequestCollection = client.db('eduDb').collection('teacherRequest');
     const classCollection = client.db('eduDb').collection('class');
-    const enrollClassCollection = client.db('eduDb').collection('enrollClassCollection');
+    const enrollClassCollection = client.db('eduDb').collection('enrollClass');
     const submissionCollection = client.db('eduDb').collection('submission');
     const assignmentCollection = client.db('eduDb').collection('assignment');
 
@@ -98,14 +98,24 @@ async function run() {
 
     // class api
     app.get('/class', async (req, res) => {
-      const result = await classCollection.aggregate([
-        {
-          $sort: {
-            totalEnrollment: -1,
-          }
+      const result = await classCollection.aggregate([{
+        $sort: {
+          totalEnrollment: -1,
         }
-      ]).limit(6).toArray();
+      }]).limit(6).toArray();
       res.send(result);
+    });
+
+    // totalCount api
+    app.get('/totalCount', async (req, res) => {
+      const totalClass = await classCollection.estimatedDocumentCount();
+      const totalEnrollment = await enrollClassCollection.estimatedDocumentCount();
+      const totalUser = await userCollection.estimatedDocumentCount();
+      res.send({
+        totalUser: totalUser,
+        totalClass: totalClass,
+        totalEnrollment: totalEnrollment,
+      });
     });
 
     // Send a ping to confirm a successful connection
