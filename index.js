@@ -96,6 +96,18 @@ async function run() {
       res.send(result);
     });
 
+    // class api
+    app.get('/class', async (req, res) => {
+      const result = await classCollection.aggregate([
+        {
+          $sort: {
+            totalEnrollment: -1,
+          }
+        }
+      ]).limit(6).toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({
       ping: 1
