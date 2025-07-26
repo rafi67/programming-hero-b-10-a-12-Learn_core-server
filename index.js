@@ -77,12 +77,18 @@ async function run() {
           }
         },
         {
+          $unwind: '$studentInfo'
+        },
+        {
           $lookup: {
             from: 'class',
             localField: 'classId',
             foreignField: '_id',
             as: 'classInfo'
           }
+        },
+        {
+          $unwind: '$classInfo'
         },
         {
           $project: {
