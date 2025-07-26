@@ -170,6 +170,13 @@ async function run() {
       res.send(result);
     });
 
+    // teacher request api
+    app.post('/teacherRequest', async (req, res) => {
+      const request = req.body;
+      const result = await teacherRequestCollection.insertOne(request);
+      res.send(result);
+    });
+
     // totalCount api
     app.get('/totalCount', async (req, res) => {
       const totalClass = await classCollection.estimatedDocumentCount();
