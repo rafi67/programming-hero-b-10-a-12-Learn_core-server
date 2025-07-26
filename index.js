@@ -123,6 +123,9 @@ async function run() {
           }
         },
         {
+          $unwind: '$teacher'
+        },
+        {
           $lookup: {
             from: 'enrollClass',
             localField: '_id',
