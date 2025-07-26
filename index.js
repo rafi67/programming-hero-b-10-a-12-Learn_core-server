@@ -170,6 +170,48 @@ async function run() {
       res.send(result);
     });
 
+    // enroll class api
+    app.get('/enrollClasses/:id', async (req, res) => {
+      const studentId = req.params.id;
+      const result = await enrollClassCollection.aggregate([{
+          $match: {
+            studentId: new ObjectId(studentId)
+          }
+        },
+        {
+          $lookup: {
+            from: 'class',
+            localField: 'classId',
+            foreignField: '_id',
+            as: 'enrolledClass',
+          }
+        },
+        {
+          $unwind: '$enrolledClass'
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'teacherId',
+            foreignField: '_id',
+            as: 'teacher'
+          }
+        },
+        {
+          $unwind: '$teacher'
+        },
+        {
+          $project: {
+            _id: 1,
+            title: '$enrolledClass.title',
+            image: '$enrolledClass.imageUrl',
+            teacherName: '$teacher.name',
+          }
+        }
+      ]).toArray();
+      res.send(result);
+    });
+
     // teacher request api
     app.post('/teacherRequest', async (req, res) => {
       const request = req.body;
