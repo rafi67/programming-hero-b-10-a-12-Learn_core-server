@@ -33,7 +33,7 @@ async function run() {
 
     // db collection
     const userCollection = client.db('eduDb').collection('user');
-    const userRoleCollection = client.db('eduDb').collection('userRole');
+    const userRoleCollection = client.db('eduDb').collection('role');
     const feedbackCollection = client.db('eduDb').collection('feedback');
     const teacherRequestCollection = client.db('eduDb').collection('teacherRequest');
     const classCollection = client.db('eduDb').collection('class');
@@ -63,6 +63,21 @@ async function run() {
           insertedId: null,
         });
       const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.patch('/makeAdmin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = {
+        userId: new ObjectId(id)
+      };
+
+      const updateDocument = {
+        $set: {
+          role: 'admin'
+        }
+      };
+      const result = await userRoleCollection.updateOne(filter, updateDocument);
       res.send(result);
     });
 
