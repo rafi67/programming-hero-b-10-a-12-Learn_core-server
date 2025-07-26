@@ -12,7 +12,8 @@ app.use(express.json());
 
 const {
   MongoClient,
-  ServerApiVersion
+  ServerApiVersion,
+  ObjectId
 } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_KEY}@cluster0.bk0nm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -103,6 +104,52 @@ async function run() {
           totalEnrollment: -1,
         }
       }]).limit(6).toArray();
+      res.send(result);
+    });
+
+    app.get('/class/:id', async (req, res) => {
+      const id = req.params.id;
+      const result = await classCollection.aggregate([{
+          $match: {
+            _id: new ObjectId(id)
+          }
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'teacherId',
+            foreignField: '_id',
+            as: 'teacher',
+          }
+        },
+        {
+          $lookup: {
+            from: 'enrollClass',
+            localField: '_id',
+            foreignField: 'classId',
+            as: 'classEnrollment',
+          }
+        },
+        {
+          $addFields: {
+            totalStudent: {
+              $size: '$classEnrollment'
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            teacherName: '$teacher.name',
+            teacherPhoto: '$teacher.photoUrl',
+            totalStudent: 1,
+            price: 1,
+            description: 1,
+            imageUrl: 1,
+            totalEnrollment: 1,
+          },
+        }
+      ]).toArray();
       res.send(result);
     });
 
