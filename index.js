@@ -104,7 +104,7 @@ async function run() {
     });
 
     // class api
-    app.get('/class', async (req, res) => {
+    app.get('/classes', async (req, res) => {
       const result = await classCollection.aggregate([{
         $sort: {
           totalEnrollment: -1,
