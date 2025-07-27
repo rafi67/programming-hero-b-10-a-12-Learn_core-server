@@ -185,6 +185,12 @@ async function run() {
       res.send(result);
     });
 
+    app.post('/addClass', async (req, res) => {
+      const Class = req.body;
+      const result = await classCollection.insertOne(Class);
+      res.send(result);
+    });
+
     // assignment api
     app.post('/addAssignment', async (req, res) => {
       const assignment = req.body;
