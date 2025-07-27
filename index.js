@@ -185,6 +185,13 @@ async function run() {
       res.send(result);
     });
 
+    // assignment api
+    app.post('/addAssignment', async (req, res) => {
+      const assignment = req.body;
+      const result = await assignmentCollection.insertOne(assignment);
+      res.send(result);
+    });
+
     // enroll class api
     app.get('/enrollClasses/:id', async (req, res) => {
       const studentId = req.params.id;
