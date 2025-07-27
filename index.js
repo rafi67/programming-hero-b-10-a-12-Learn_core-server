@@ -185,6 +185,14 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/classDetails/:id', async (req, res) => {
+      const id = req.params.id;
+      const result = await assignmentCollection.findOne({
+        classId: new ObjectId(id)
+      });
+      res.send(result);
+    });
+
     app.post('/addClass', async (req, res) => {
       const Class = req.body;
       const result = await classCollection.insertOne(Class);
