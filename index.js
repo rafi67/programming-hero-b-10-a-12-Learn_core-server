@@ -255,6 +255,14 @@ async function run() {
     });
 
     // teacher request api
+    app.get('/teacherRequest', async (req, res) => {
+      const query = {
+        status: 'pending'
+      };
+      const result = await teacherRequestCollection.find(query).toArray();
+      res.send(result);
+    });
+
     app.post('/teacherRequest', async (req, res) => {
       const request = req.body;
       const result = await teacherRequestCollection.insertOne(request);
