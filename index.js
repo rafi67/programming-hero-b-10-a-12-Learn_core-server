@@ -118,6 +118,12 @@ async function run() {
       res.send(result);
     });
 
+    app.post('/feedback', async (req, res) => {
+      const feedback = req.body;
+      const result = await feedbackCollection.insertOne(feedback);
+      res.send(result);
+    });
+
     // class api
     app.get('/classes', async (req, res) => {
       const result = await classCollection.aggregate([{
