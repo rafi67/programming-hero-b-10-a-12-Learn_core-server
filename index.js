@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const port = 5000;
 
 // middleware
@@ -40,6 +41,15 @@ async function run() {
     const enrollClassCollection = client.db('eduDb').collection('enrollClass');
     const submissionCollection = client.db('eduDb').collection('submission');
     const assignmentCollection = client.db('eduDb').collection('assignment');
+
+    // jwt api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.SECRET_KEY, { expiresIn: '2h' });
+      res.send({
+        token
+      });
+    });
 
     // user api
     app.get('/user/:email', async (req, res) => {
