@@ -10,6 +10,24 @@ const port = 5000;
 app.use(cors());
 app.use(express.json());
 
+// jwt token verifier middleware
+const verifyToken = (req, res, next) => {
+  if (!req.headers.authorization) {
+    return res.status(401).send({
+      message: 'unauthorized access'
+    });
+  }
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({
+        message: 'unauthorized access'
+      });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 const {
   MongoClient,
@@ -45,7 +63,9 @@ async function run() {
     // jwt api
     app.post('/jwt', async (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, process.env.SECRET_KEY, { expiresIn: '2h' });
+      const token = jwt.sign(user, process.env.SECRET_KEY, {
+        expiresIn: '2h'
+      });
       res.send({
         token
       });
@@ -223,7 +243,7 @@ async function run() {
     });
 
     // enroll class api
-    app.get('/enrollClasses/:id', async (req, res) => {
+    app.get('/enrollClasses/:id', verifyToken, async (req, res) => {
       const studentId = req.params.id;
       const result = await enrollClassCollection.aggregate([{
           $match: {
