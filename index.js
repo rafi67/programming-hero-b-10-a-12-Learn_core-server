@@ -141,6 +141,7 @@ async function run() {
             name: '$studentInfo.name',
             photoUrl: '$studentInfo.photoUrl',
             feedbackText: 1,
+            rating: 1,
             title: '$classInfo.title'
           }
         }
