@@ -300,6 +300,36 @@ async function run() {
       res.send(result);
     });
 
+    // teacher api
+    app.get('/teacher', async (req, res) => {
+      const result = await teacherRequestCollection.aggregate([
+        {
+          $match: {
+            status: 'accepted'
+          }
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'teacherInfo'
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            experience: 1,
+            name: '$teacherInfo.name',
+            photo: '$teacherInfo.photoUrl'
+          }
+        }
+      ]).toArray();
+
+      res.send(result);
+    });
+
     // totalCount api
     app.get('/totalCount', async (req, res) => {
       const totalClass = await classCollection.estimatedDocumentCount();
