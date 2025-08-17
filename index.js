@@ -215,10 +215,34 @@ async function run() {
     });
 
     app.get('/allClasses', async (req, res) => {
-      const query = {
-        status: 'accepted',
-      };
-      const result = await classCollection.find(query).toArray();
+      const result = await classCollection.aggregate([{
+          $match: {
+            status: 'accepted'
+          }
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'teacherId',
+            foreignField: '_id',
+            as: 'teacher'
+          }
+        },
+        {
+          $unwind: '$teacher'
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            name: '$teacher.name',
+            price: 1,
+            description: 1,
+            totalEnrollment: 1,
+            status: 1
+          }
+        }
+      ]).toArray();
       res.send(result);
     });
 
@@ -302,8 +326,7 @@ async function run() {
 
     // teacher api
     app.get('/teacher', async (req, res) => {
-      const result = await teacherRequestCollection.aggregate([
-        {
+      const result = await teacherRequestCollection.aggregate([{
           $match: {
             status: 'accepted'
           }
