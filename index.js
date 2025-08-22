@@ -237,6 +237,7 @@ async function run() {
             title: 1,
             name: '$teacher.name',
             price: 1,
+            imageUrl: 1,
             description: 1,
             totalEnrollment: 1,
             status: 1
