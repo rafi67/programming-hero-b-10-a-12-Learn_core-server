@@ -249,9 +249,47 @@ async function run() {
 
     app.get('/classDetails/:id', async (req, res) => {
       const id = req.params.id;
-      const result = await assignmentCollection.findOne({
-        classId: new ObjectId(id)
-      });
+      const result = await classCollection.aggregate([{
+          $match: {
+            _id: new ObjectId(id)
+          }
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'teacherId',
+            foreignField: '_id',
+            as: "teacher",
+          }
+        },
+        {
+          $unwind: '$teacher'
+        },
+        {
+          $lookup: {
+            from: 'teacherRequest',
+            localField: 'teacherId',
+            foreignField: 'userId',
+            as: 'teacherInfo'
+          }
+        },
+        {
+          $unwind: '$teacherInfo'
+        },
+        {
+          $project: {
+            _id: 1,
+            name: '$teacher.name',
+            photo: '$teacher.photoUrl',
+            designation: '$teacherInfo.title',
+            experience: '$teacherInfo.experience',
+            title: 1,
+            price: 1,
+            imageUrl: 1,
+            totalEnrollment: 1,
+          }
+        }
+      ]).toArray();
       res.send(result);
     });
 
@@ -339,6 +377,9 @@ async function run() {
             foreignField: '_id',
             as: 'teacherInfo'
           }
+        },
+        {
+          $unwind: '$teacherInfo'
         },
         {
           $project: {
