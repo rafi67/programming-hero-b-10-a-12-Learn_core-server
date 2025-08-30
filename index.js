@@ -481,6 +481,26 @@ async function run() {
       });
     });
 
+    app.post('/verifyPayment', async (req, res) => {
+      const data = req.body;
+      const query = {
+        email: data.email
+      };
+      const paymentData = await paymentCollection.findOne(query);
+      if(paymentData) {
+        const ClassId = paymentData.classId.toString();
+          if(data.classId===ClassId) {
+            res.send({
+              isPaid: true
+            });
+            return;
+          }
+      }
+      res.send({
+        isPaid: false
+      });
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({
       ping: 1
