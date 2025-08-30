@@ -441,7 +441,7 @@ async function run() {
         price: payment.price,
         date: payment.date,
         transactionId: payment.transactionId,
-        classId: payment.classId,
+        classId: new ObjectId(payment.classId),
       }
       await paymentCollection.insertOne(paymentInfo);
 
@@ -470,7 +470,7 @@ async function run() {
 
       const updateDoc = {
         $set: {
-          totalEnrollment: Class.totalEnrollment+1
+          totalEnrollment: Class.totalEnrollment + 1
         }
       };
 
