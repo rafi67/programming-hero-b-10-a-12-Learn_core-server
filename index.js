@@ -60,6 +60,7 @@ async function run() {
     const enrollClassCollection = client.db('eduDb').collection('enrollClass');
     const submissionCollection = client.db('eduDb').collection('submission');
     const assignmentCollection = client.db('eduDb').collection('assignment');
+    const paymentCollection = client.db('eduDb').collection('payment');
 
     // jwt api
     app.post('/jwt', async (req, res) => {
@@ -424,6 +425,59 @@ async function run() {
 
       res.send({
         clientSecret: paymentIntent.client_secret
+      });
+    });
+
+    // save payment info
+    app.post('/payments', verifyToken, async (req, res) => {
+      const payment = req.body;
+      const qry = {
+        email: payment.email
+      };
+      const user = await userCollection.findOne(qry);
+      const paymentInfo = {
+        userId: user._id,
+        email: payment.email,
+        price: payment.price,
+        date: payment.date,
+        transactionId: payment.transactionId,
+        classId: payment.classId,
+      }
+      await paymentCollection.insertOne(paymentInfo);
+
+
+      const doc = {
+        userId: new ObjectId(user._id),
+        role: 'student'
+      };
+
+      await userRoleCollection.insertOne(doc);
+
+      const Class = await classCollection.findOne({
+        _id: new ObjectId(payment.classId)
+      });
+
+      const enroll = {
+        classId: new ObjectId(payment.classId),
+        teacherId: Class.teacherId,
+        studentId: user._id
+      };
+
+      await enrollClassCollection.insertOne(enroll);
+      const query = {
+        _id: Class._id
+      };
+
+      const updateDoc = {
+        $set: {
+          totalEnrollment: Class.totalEnrollment+1
+        }
+      };
+
+      await classCollection.updateOne(query, updateDoc);
+
+      res.send({
+        message: 'success'
       });
     });
 
