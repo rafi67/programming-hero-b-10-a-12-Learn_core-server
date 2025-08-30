@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_SK);
 const port = 5000;
 
 // middleware
@@ -247,7 +248,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/classDetails/:id', async (req, res) => {
+    app.get('/classDetails/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const result = await classCollection.aggregate([{
           $match: {
@@ -287,6 +288,7 @@ async function run() {
             price: 1,
             imageUrl: 1,
             totalEnrollment: 1,
+            description: 1,
           }
         }
       ]).toArray();
@@ -404,6 +406,24 @@ async function run() {
         totalUser: totalUser,
         totalClass: totalClass,
         totalEnrollment: totalEnrollment,
+      });
+    });
+
+    // payment intent
+    app.post('/create-payment-intent', verifyToken, async (req, res) => {
+      const {
+        price
+      } = req.body;
+      const amount = parseInt(price * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card'],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
       });
     });
 
