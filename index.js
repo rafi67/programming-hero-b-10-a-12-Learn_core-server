@@ -65,7 +65,6 @@ async function run() {
     // security middleware
     const verifyStudent = async (req, res, next) => {
       const email = req.query.email;
-      console.log('user email:', email);
       const result = await userCollection.aggregate([{
           $match: {
             email: email
@@ -90,8 +89,6 @@ async function run() {
         }
       ]).toArray();
 
-      console.log('verify student =', result[0].role);
-
       if (result[0].role !== 'student') {
         res.status(403).send({
           message: 'forbidden access'
@@ -99,7 +96,6 @@ async function run() {
         return;
       }
       req.userId = result[0]._id;
-      console.log('verified user is student');
       next();
     }
 
@@ -353,7 +349,39 @@ async function run() {
           }
         },
       ]).toArray();
-      
+
+      res.send(result);
+    });
+
+    app.get('/myEnrollClassDetails', verifyToken, verifyStudent, async (req, res) => {
+      const classId = req.query.enrollClassId;
+
+      const result = await classCollection.aggregate([{
+          $match: {
+            _id: new ObjectId(classId)
+          }
+        },
+        {
+          $lookup: {
+            from: 'assignment',
+            localField: '_id',
+            foreignField: 'classId',
+            as: 'Assignment'
+          }
+        },
+        {
+          $unwind: '$Assignment'
+        },
+        {
+          $project: {
+            _id: '$Assignment._id',
+            title: '$Assignment.title',
+            description: '$Assignment.description',
+            deadline: '$Assignment.deadline'
+          }
+        }
+      ]).toArray();
+
       res.send(result);
     });
 
@@ -602,14 +630,14 @@ async function run() {
     app.get('/verifyPayment', async (req, res) => {
       const email = req.query.email;
       const classId = req.query.classId;
-      
+
       const query = {
         classId: new ObjectId(classId),
       };
       const paymentData = await paymentCollection.findOne(query);
-      
+
       if (paymentData) {
-        if (paymentData.classId.toString()===classId && paymentData.email===email) {
+        if (paymentData.classId.toString() === classId && paymentData.email === email) {
           res.send({
             isPaid: true
           });
