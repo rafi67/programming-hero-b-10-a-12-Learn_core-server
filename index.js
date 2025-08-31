@@ -98,6 +98,34 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/verifyUser/:email', verifyToken, async(req, res) => {
+      const email = req.params.email;
+      const result = await userCollection.aggregate([
+        {
+          $match: {
+            email: email,
+          }
+        },
+        {
+          $lookup: {
+            from: 'role',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'role'
+          }
+        },
+        {
+          $unwind: '$role'
+        },
+        {
+          $project: {
+            role: '$role.role',
+          }
+        }
+      ]).toArray();
+      res.send(result);
+    });
+
     app.patch('/makeAdmin/:id', async (req, res) => {
       const id = req.params.id;
       const filter = {
