@@ -11,7 +11,7 @@ const port = 5000;
 app.use(cors());
 app.use(express.json());
 
-// jwt token verifier middleware
+// security middleware
 const verifyToken = (req, res, next) => {
   if (!req.headers.authorization) {
     return res.status(401).send({
@@ -62,6 +62,47 @@ async function run() {
     const assignmentCollection = client.db('eduDb').collection('assignment');
     const paymentCollection = client.db('eduDb').collection('payment');
 
+    // security middleware
+    const verifyStudent = async (req, res, next) => {
+      const email = req.query.email;
+      console.log('user email:', email);
+      const result = await userCollection.aggregate([{
+          $match: {
+            email: email
+          }
+        },
+        {
+          $lookup: {
+            from: 'role',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'Role'
+          }
+        },
+        {
+          $unwind: '$Role'
+        },
+        {
+          $project: {
+            _id: 1,
+            role: '$Role.role'
+          }
+        }
+      ]).toArray();
+
+      console.log('verify student =', result[0].role);
+
+      if (result[0].role !== 'student') {
+        res.status(403).send({
+          message: 'forbidden access'
+        });
+        return;
+      }
+      req.userId = result[0]._id;
+      console.log('verified user is student');
+      next();
+    }
+
     // jwt api
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -98,10 +139,9 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/verifyUser/:email', verifyToken, async(req, res) => {
+    app.get('/verifyUser/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
-      const result = await userCollection.aggregate([
-        {
+      const result = await userCollection.aggregate([{
           $match: {
             email: email,
           }
@@ -277,6 +317,46 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/myEnrollClass', verifyToken, verifyStudent, async (req, res) => {
+      const studentId = req.userId;
+
+      const result = await enrollClassCollection.aggregate([{
+          $match: {
+            studentId: studentId
+          }
+        },
+        {
+          $lookup: {
+            from: 'class',
+            localField: 'classId',
+            foreignField: '_id',
+            as: 'Class'
+          }
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'Class.teacherId',
+            foreignField: '_id',
+            as: 'teacher'
+          }
+        },
+        {
+          $unwind: '$teacher'
+        },
+        {
+          $project: {
+            _id: '$Class._id',
+            name: '$teacher.name',
+            title: '$Class.title',
+            imageUrl: '$Class.imageUrl'
+          }
+        },
+      ]).toArray();
+      
+      res.send(result);
+    });
+
     app.get('/classDetails/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const result = await classCollection.aggregate([{
@@ -438,7 +518,7 @@ async function run() {
       });
     });
 
-    // payment intent
+    // payment api
     app.post('/create-payment-intent', verifyToken, async (req, res) => {
       const {
         price
@@ -456,13 +536,14 @@ async function run() {
       });
     });
 
-    // save payment info
     app.post('/payments', verifyToken, async (req, res) => {
       const payment = req.body;
       const qry = {
         email: payment.email
       };
       const user = await userCollection.findOne(qry);
+
+      // storing payment data
       const paymentInfo = {
         userId: user._id,
         email: payment.email,
@@ -473,13 +554,22 @@ async function run() {
       }
       await paymentCollection.insertOne(paymentInfo);
 
-
+      // store role data
       const doc = {
         userId: new ObjectId(user._id),
         role: 'student'
       };
 
-      await userRoleCollection.insertOne(doc);
+      const roleQuery = {
+        userId: doc.userId
+      };
+
+      const Role = await userRoleCollection.findOne(roleQuery);
+
+      // if no role exists then store the role data
+      if (!Role) {
+        await userRoleCollection.insertOne(doc);
+      }
 
       const Class = await classCollection.findOne({
         _id: new ObjectId(payment.classId)
@@ -509,20 +599,22 @@ async function run() {
       });
     });
 
-    app.post('/verifyPayment', async (req, res) => {
-      const data = req.body;
+    app.get('/verifyPayment', async (req, res) => {
+      const email = req.query.email;
+      const classId = req.query.classId;
+      
       const query = {
-        email: data.email
+        classId: new ObjectId(classId),
       };
       const paymentData = await paymentCollection.findOne(query);
-      if(paymentData) {
-        const ClassId = paymentData.classId.toString();
-          if(data.classId===ClassId) {
-            res.send({
-              isPaid: true
-            });
-            return;
-          }
+      
+      if (paymentData) {
+        if (paymentData.classId.toString()===classId && paymentData.email===email) {
+          res.send({
+            isPaid: true
+          });
+          return;
+        }
       }
       res.send({
         isPaid: false
