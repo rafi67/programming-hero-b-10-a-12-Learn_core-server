@@ -215,10 +215,20 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/feedback', async (req, res) => {
+    app.post('/feedback', verifyToken, verifyStudent, async (req, res) => {
       const feedback = req.body;
-      const result = await feedbackCollection.insertOne(feedback);
-      res.send(result);
+      const doc = {
+        studentId: req.userId,
+        classId: new ObjectId(feedback.classId),
+        feedbackText: feedback.feedbackText,
+        rating: feedback.rating
+      };
+      const result = await feedbackCollection.insertOne(doc);
+      let response = false;
+      if (result) response = true;
+      res.send({
+        response
+      });
     });
 
     // class api
