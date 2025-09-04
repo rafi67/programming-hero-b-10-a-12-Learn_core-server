@@ -231,6 +231,24 @@ async function run() {
       });
     });
 
+    app.get('/verifyFeedback', verifyToken, verifyStudent, async (req, res) => {
+      const studentId = req.userId;
+      const classId = req.query.classId;
+      const query = {
+        studentId: studentId,
+        classId: new ObjectId(classId)
+      };
+      const result = await feedbackCollection.find(query).toArray();
+      
+      if (result.length != 0) {
+        res.send(true);
+        console.log('returning true');
+        return;
+      }
+      console.log('returning false');
+      res.send(false);
+    });
+
     // class api
     app.get('/classes', async (req, res) => {
       const result = await classCollection.aggregate([{
