@@ -466,6 +466,19 @@ async function run() {
       res.send(result);
     });
 
+    // submission api
+    app.post('/submitAssignment', verifyToken, verifyStudent, async(req, res) => {
+      const studentId = req.userId;
+      const assignment = req.body;
+      const submit = {
+        studentId: studentId,
+        assignmentId: new ObjectId(assignment.assignmentId),
+        Url: assignment.Url
+      };
+      const result = await submissionCollection.insertOne(submit);
+      res.send(result);
+    });
+
     // assignment api
     app.post('/addAssignment', async (req, res) => {
       const assignment = req.body;
