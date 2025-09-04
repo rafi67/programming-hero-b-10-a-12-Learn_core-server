@@ -242,10 +242,8 @@ async function run() {
       
       if (result.length != 0) {
         res.send(true);
-        console.log('returning true');
         return;
       }
-      console.log('returning false');
       res.send(false);
     });
 
@@ -467,7 +465,22 @@ async function run() {
     });
 
     // submission api
-    app.post('/submitAssignment', verifyToken, verifyStudent, async(req, res) => {
+    app.get('/verifySubmission', verifyToken, verifyStudent, async (req, res) => {
+      const studentId = req.userId;
+      const assignmentId = req.query.assignmentId;
+      const query = {
+        studentId: studentId,
+        assignmentId: new ObjectId(assignmentId)
+      };
+      const result = submissionCollection.find(query).toArray();
+      if(result.length!=0) {
+        res.send(true);
+        return;
+      }
+      res.send(false);
+    });
+
+    app.post('/submitAssignment', verifyToken, verifyStudent, async (req, res) => {
       const studentId = req.userId;
       const assignment = req.body;
       const submit = {
