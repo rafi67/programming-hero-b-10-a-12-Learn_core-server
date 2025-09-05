@@ -97,7 +97,42 @@ async function run() {
       }
       req.userId = result[0]._id;
       next();
-    }
+    };
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.query.email;
+      const result = await userCollection.aggregate([{
+          $match: {
+            email: email
+          }
+        },
+        {
+          $lookup: {
+            from: 'role',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'Role'
+          }
+        },
+        {
+          $unwind: '$Role'
+        },
+        {
+          $project: {
+            _id: 1,
+            role: '$Role.role'
+          }
+        }
+      ]).toArray();
+
+      if (result[0].role !== 'admin') {
+        res.status(403).send({
+          message: 'forbidden access'
+        });
+        return;
+      }
+      req.userId = result[0]._id;
+      next();
+    };
 
     // jwt api
     app.post('/jwt', async (req, res) => {
@@ -239,7 +274,7 @@ async function run() {
         classId: new ObjectId(classId)
       };
       const result = await feedbackCollection.find(query).toArray();
-      
+
       if (result.length != 0) {
         res.send(true);
         return;
@@ -473,7 +508,7 @@ async function run() {
         assignmentId: new ObjectId(assignmentId)
       };
       const result = submissionCollection.find(query).toArray();
-      if(result.length!=0) {
+      if (result.length != 0) {
         res.send(true);
         return;
       }
@@ -542,11 +577,31 @@ async function run() {
     });
 
     // teacher request api
-    app.get('/teacherRequest', async (req, res) => {
-      const query = {
-        status: 'pending'
-      };
-      const result = await teacherRequestCollection.find(query).toArray();
+    app.get('/teacherRequest', verifyToken, verifyAdmin, async (req, res) => {
+      const result = await teacherRequestCollection.aggregate([
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'teacher'
+          }
+        },
+        {
+          $unwind: '$teacher'
+        },
+        {
+          $project: {
+            _id: 1,
+            name: '$teacher.name',
+            image: '$teacher.photoUrl',
+            title: 1,
+            category: 1,
+            experience: 1,
+            status: 1
+          }
+        },
+      ]).toArray();
       res.send(result);
     });
 
