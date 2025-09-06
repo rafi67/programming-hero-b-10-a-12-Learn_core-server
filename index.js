@@ -502,17 +502,35 @@ async function run() {
     // submission api
     app.get('/verifySubmission', verifyToken, verifyStudent, async (req, res) => {
       const studentId = req.userId;
-      const assignmentId = req.query.assignmentId;
+      const classId = req.query.classId;
       const query = {
         studentId: studentId,
-        assignmentId: new ObjectId(assignmentId)
+        classId: new ObjectId(classId)
       };
-      const result = submissionCollection.find(query).toArray();
-      if (result.length != 0) {
-        res.send(true);
-        return;
+
+      const query2 = {
+        classId: new ObjectId(classId),
+      };
+
+      const submittedAssignment = await submissionCollection.find(query).toArray();
+      const assignment = await assignmentCollection.find(query2).toArray();
+
+      const dictionary = {};
+
+      for (let i = 0; i < assignment.length; i++) {
+        dictionary[assignment[i]._id.toString()] = false;
       }
-      res.send(false);
+
+      for (let i = 0; i < assignment.length; i++) {
+        const searchAssignment = assignment[i]._id;
+        for (let j = 0; j < submittedAssignment.length; j++) {
+          if (searchAssignment === submittedAssignment[j].assignmentId) {
+            dictionary[assignment[i]._id.toString()] = true;
+          }
+        }
+      }
+
+      res.send(dictionary);
     });
 
     app.post('/submitAssignment', verifyToken, verifyStudent, async (req, res) => {
@@ -578,8 +596,7 @@ async function run() {
 
     // teacher request api
     app.get('/teacherRequest', verifyToken, verifyAdmin, async (req, res) => {
-      const result = await teacherRequestCollection.aggregate([
-        {
+      const result = await teacherRequestCollection.aggregate([{
           $lookup: {
             from: 'user',
             localField: 'userId',
