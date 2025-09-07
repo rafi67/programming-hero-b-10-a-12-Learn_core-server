@@ -146,14 +146,33 @@ async function run() {
     });
 
     // user api
-    app.get('/user/:email', async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        email: email,
-      };
-      const result = await userCollection.findOne(query);
+    app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+      const result = await userCollection.aggregate([{
+          $lookup: {
+            from: 'role',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'Role',
+          }
+        },
+        {
+          $unwind: {
+            path: "$Role",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            photoUrl: 1,
+            email: 1,
+            role: '$Role.role'
+          }
+        },
+      ]).toArray();
       res.send(result);
-    });
+    })
 
     app.post('/user', verifyToken, async (req, res) => {
       const user = req.body;
@@ -197,7 +216,12 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/makeAdmin/:id', async (req, res) => {
+    app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.patch('/makeAdmin/:id', verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = {
         userId: new ObjectId(id)
@@ -525,7 +549,7 @@ async function run() {
         const searchAssignment = assignment[i]._id;
         for (let j = 0; j < submittedAssignment.length; j++) {
           if (searchAssignment === submittedAssignment[j].assignmentId) {
-            dictionary[assignment[i]._id.toString()] = true;
+            dictionary[assignment[i]._id] = true;
           }
         }
       }
