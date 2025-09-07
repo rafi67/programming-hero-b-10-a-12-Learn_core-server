@@ -398,6 +398,32 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/allCourses', verifyToken, verifyAdmin, async (req, res) => {
+      const result = await classCollection.aggregate([{
+          $lookup: {
+            from: 'user',
+            localField: 'teacherId',
+            foreignField: '_id',
+            as: 'Teacher'
+          }
+        },
+        {
+          $unwind: '$Teacher'
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            imageUrl: 1,
+            email: '$Teacher.email',
+            description: 1,
+            status: 1
+          }
+        },
+      ]).toArray();
+      res.send(result);
+    });
+
     app.get('/myEnrollClass', verifyToken, verifyStudent, async (req, res) => {
       const studentId = req.userId;
 
