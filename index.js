@@ -98,6 +98,7 @@ async function run() {
       req.userId = result[0]._id;
       next();
     };
+
     const verifyAdmin = async (req, res, next) => {
       const email = req.query.email;
       const result = await userCollection.aggregate([{
@@ -125,6 +126,41 @@ async function run() {
       ]).toArray();
 
       if (result[0].role !== 'admin') {
+        res.status(403).send({
+          message: 'forbidden access'
+        });
+        return;
+      }
+      req.userId = result[0]._id;
+      next();
+    };
+    const verifyTeacher = async (req, res, next) => {
+      const email = req.query.email;
+      const result = await userCollection.aggregate([{
+          $match: {
+            email: email
+          }
+        },
+        {
+          $lookup: {
+            from: 'role',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'Role'
+          }
+        },
+        {
+          $unwind: '$Role'
+        },
+        {
+          $project: {
+            _id: 1,
+            role: '$Role.role'
+          }
+        }
+      ]).toArray();
+
+      if (result[0].role !== 'teacher') {
         res.status(403).send({
           message: 'forbidden access'
         });
@@ -391,6 +427,34 @@ async function run() {
             imageUrl: 1,
             description: 1,
             totalEnrollment: 1,
+            status: 1
+          }
+        }
+      ]).toArray();
+      res.send(result);
+    });
+
+    app.get('/myClass', verifyToken, verifyTeacher, async (req, res) => {
+      const result = await classCollection.aggregate([{
+          $lookup: {
+            from: 'user',
+            localField: 'teacherId',
+            foreignField: '_id',
+            as: 'teacher'
+          }
+        },
+        {
+          $unwind: '$teacher'
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            name: '$teacher.name',
+            email: '$teacher.email',
+            price: 1,
+            imageUrl: 1,
+            description: 1,
             status: 1
           }
         }
