@@ -462,6 +462,57 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/myClassProgress', verifyToken, verifyTeacher, async (req, res) => {
+      const classId = req.query.classId;
+      const result = await classCollection.aggregate([
+        {
+          $match: {
+            _id: new ObjectId(classId)
+          }
+        },
+        {
+          $lookup: {
+            from: 'assignment',
+            localField: '_id',
+            foreignField: 'classId',
+            as: 'Assignment'
+          }
+        },
+        {
+          $addFields: {
+            totalAssignment: {
+              $size: '$Assignment'
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: 'submission',
+            localField: 'Assignment._id',
+            foreignField: '_id',
+            as: 'Submission'
+          }
+        },
+        {
+          $addFields: {
+            totalSubmission: {
+              $size: '$Submission'
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            totalEnrollment: 1,
+            totalAssignment: 1,
+            totalSubmission: 1,
+          }
+        },
+      ]).toArray();
+
+      res.send(result);
+    });
+
     app.get('/allCourses', verifyToken, verifyAdmin, async (req, res) => {
       const result = await classCollection.aggregate([{
           $lookup: {
