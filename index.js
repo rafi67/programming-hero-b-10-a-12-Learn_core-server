@@ -464,8 +464,7 @@ async function run() {
 
     app.get('/myClassProgress', verifyToken, verifyTeacher, async (req, res) => {
       const classId = req.query.classId;
-      const result = await classCollection.aggregate([
-        {
+      const result = await classCollection.aggregate([{
           $match: {
             _id: new ObjectId(classId)
           }
@@ -667,18 +666,16 @@ async function run() {
     // submission api
     app.get('/verifySubmission', verifyToken, verifyStudent, async (req, res) => {
       const studentId = req.userId;
-      const classId = req.query.classId;
+      const classId = new ObjectId(req.query.classId);
       const query = {
-        studentId: studentId,
-        classId: new ObjectId(classId)
+        classId: classId
       };
-
       const query2 = {
-        classId: new ObjectId(classId),
+        studentId: studentId
       };
 
-      const submittedAssignment = await submissionCollection.find(query).toArray();
-      const assignment = await assignmentCollection.find(query2).toArray();
+      const assignment = await assignmentCollection.find(query).toArray();
+      const submittedAssignment = await submissionCollection.find(query2).toArray();
 
       const dictionary = {};
 
@@ -687,12 +684,9 @@ async function run() {
       }
 
       for (let i = 0; i < assignment.length; i++) {
-        const searchAssignment = assignment[i]._id;
-        for (let j = 0; j < submittedAssignment.length; j++) {
-          if (searchAssignment === submittedAssignment[j].assignmentId) {
-            dictionary[assignment[i]._id] = true;
-          }
-        }
+        for (let j = 0; j < submittedAssignment.length; j++)
+          if (assignment[i]._id.toString() == submittedAssignment[j].assignmentId.toString())
+            dictionary[assignment[i]._id.toString()] = true;
       }
 
       res.send(dictionary);
@@ -711,9 +705,20 @@ async function run() {
     });
 
     // assignment api
-    app.post('/addAssignment', async (req, res) => {
+    app.post('/addAssignment', verifyToken, verifyTeacher, async (req, res) => {
       const assignment = req.body;
-      const result = await assignmentCollection.insertOne(assignment);
+      const query = {
+        _id: new ObjectId(req.query.classId)
+      }
+      const classDetails = await classCollection.findOne(query);
+      const data = {
+        teacherId: classDetails.teacherId,
+        classId: new ObjectId(req.query.classId),
+        title: assignment.title,
+        deadline: assignment.deadline,
+        description: assignment.description
+      };
+      const result = await assignmentCollection.insertOne(data);
       res.send(result);
     });
 
