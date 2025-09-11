@@ -673,6 +673,27 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/updateClass', verifyToken, verifyTeacher, async (req, res) => {
+      const classUpdate = req.body;
+      const classId = new ObjectId(req.query.classId);
+      const doc = {
+        $set: {
+          title: classUpdate.title,
+          price: classUpdate.price,
+          description: classUpdate.description,
+          description: classUpdate.description,
+          imageUrl: classUpdate.imageUrl
+        }
+      };
+
+      const query = {
+        _id: classId
+      };
+
+      const result = await classCollection.updateOne(query, doc);
+      res.send(result);
+    });
+
     app.delete('/deleteClass/:id', verifyToken, verifyTeacher, async (req, res) => {
       const classId = req.params.id;
       const result = await classCollection.deleteOne({
