@@ -781,10 +781,9 @@ async function run() {
 
     app.patch('/teacherStatus', verifyToken, verifyAdmin, async (req, res) => {
       const status = req.body.status;
-      console.log(status);
       const teacherId = new ObjectId(req.query.teacherId);
       const query = {
-        _id: teacherId
+        userId: teacherId
       };
 
       const updateDoc = {
@@ -793,9 +792,16 @@ async function run() {
         }
       };
 
+      const insert = {
+        userId: teacherId,
+        role: 'teacher'
+      };
+
       const result = await teacherRequestCollection.updateOne(query, updateDoc);
 
-      res.send(result);
+      const result2  = await userRoleCollection.insertOne(insert);
+
+      res.send(result2);
     });
 
     app.delete('/deleteClass/:id', verifyToken, verifyTeacher, async (req, res) => {
@@ -923,6 +929,7 @@ async function run() {
         {
           $project: {
             _id: 1,
+            userId: 1,
             name: '$teacher.name',
             image: '$teacher.photoUrl',
             title: 1,
