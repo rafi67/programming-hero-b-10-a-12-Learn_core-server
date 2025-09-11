@@ -455,7 +455,12 @@ async function run() {
     });
 
     app.get('/myClass', verifyToken, verifyTeacher, async (req, res) => {
-      const result = await classCollection.aggregate([{
+      const userId = req.userId;
+      const result = await classCollection.aggregate([
+        {
+          $match: {teacherId: userId}
+        },
+        {
           $lookup: {
             from: 'user',
             localField: 'teacherId',
