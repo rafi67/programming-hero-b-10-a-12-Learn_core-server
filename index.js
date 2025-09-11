@@ -225,6 +225,26 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/makeAdmin', verifyToken, verifyAdmin, async (req, res) => {
+      const userId = new ObjectId(req.query.userId);
+      const query = {
+        _id: userId
+      };
+      const update = {
+        $set: {
+          role: 'admin'
+        }
+      };
+      let result = await userRoleCollection.updateOne(query, update);
+      if(result.upsertedId==null) {
+        result = await userRoleCollection.insertOne({
+          userId: userId,
+          role: "admin"
+        })
+      }
+      res.send(result);
+    });
+
     app.get('/verifyUser/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
       const result = await userCollection.aggregate([{
