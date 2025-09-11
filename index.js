@@ -694,6 +694,25 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/teacherStatus', verifyToken, verifyAdmin, async (req, res) => {
+      const status = req.body.status;
+      console.log(status);
+      const teacherId = new ObjectId(req.query.teacherId);
+      const query = {
+        _id: teacherId
+      };
+
+      const updateDoc = {
+        $set: {
+          status: status
+        }
+      };
+
+      const result = await teacherRequestCollection.updateOne(query, updateDoc);
+
+      res.send(result);
+    });
+
     app.delete('/deleteClass/:id', verifyToken, verifyTeacher, async (req, res) => {
       const classId = req.params.id;
       const result = await classCollection.deleteOne({
@@ -831,9 +850,18 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/teacherRequest', async (req, res) => {
+    app.post('/teacherRequest', verifyToken, async (req, res) => {
       const request = req.body;
-      const result = await teacherRequestCollection.insertOne(request);
+      const email = req.query.email;
+      const user = await userCollection.findOne({email: email});
+      const teacherRequest = {
+        userId: user._id,
+        experience: request.experience,
+        title: request.title,
+        category: request.category,
+        status: request.status,
+      };
+      const result = await teacherRequestCollection.insertOne(teacherRequest);
       res.send(result);
     });
 
