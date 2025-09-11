@@ -210,7 +210,7 @@ async function run() {
       res.send(result);
     })
 
-    app.post('/user', verifyToken, async (req, res) => {
+    app.post('/user', async (req, res) => {
       const user = req.body;
       const query = {
         email: user.email,
@@ -657,11 +657,29 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/addClass', async (req, res) => {
+    app.post('/addClass', verifyToken, verifyTeacher, async (req, res) => {
       const Class = req.body;
-      const result = await classCollection.insertOne(Class);
+      const teacherId = req.userId;
+      const doc = {
+        teacherId: teacherId,
+        title: Class.title,
+        price: Class.price,
+        description: Class.description,
+        imageUrl: Class.imageUrl,
+        totalEnrollment: 0,
+        status: 'pending'
+      };
+      const result = await classCollection.insertOne(doc);
       res.send(result);
     });
+
+    app.delete('/deleteClass/:id', verifyToken, verifyTeacher, async (req, res) => {
+      const classId = req.params.id;
+      const result = await classCollection.deleteOne({
+        _id: new ObjectId(classId)
+      });
+      res.send(result);
+    })
 
     // submission api
     app.get('/verifySubmission', verifyToken, verifyStudent, async (req, res) => {
