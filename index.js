@@ -1093,16 +1093,15 @@ async function run() {
 
       const query = {
         classId: new ObjectId(classId),
+        email: email
       };
       const paymentData = await paymentCollection.findOne(query);
 
       if (paymentData) {
-        if (paymentData.classId.toString() === classId && paymentData.email === email) {
-          res.send({
-            isPaid: true
-          });
-          return;
-        }
+        res.send({
+          isPaid: true,
+        });
+        return;
       }
       res.send({
         isPaid: false
