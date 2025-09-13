@@ -236,7 +236,7 @@ async function run() {
         }
       };
       let result = await userRoleCollection.updateOne(query, update);
-      if(result.upsertedId==null) {
+      if (result.upsertedId == null) {
         result = await userRoleCollection.insertOne({
           userId: userId,
           role: "admin"
@@ -456,9 +456,10 @@ async function run() {
 
     app.get('/myClass', verifyToken, verifyTeacher, async (req, res) => {
       const userId = req.userId;
-      const result = await classCollection.aggregate([
-        {
-          $match: {teacherId: userId}
+      const result = await classCollection.aggregate([{
+          $match: {
+            teacherId: userId
+          }
         },
         {
           $lookup: {
@@ -802,9 +803,13 @@ async function run() {
         role: 'teacher'
       };
 
-      const result = await teacherRequestCollection.updateOne(query, updateDoc);
+      await teacherRequestCollection.updateOne(query, updateDoc);
 
-      const result2  = await userRoleCollection.insertOne(insert);
+      let result2;
+
+      if (status === 'accepted') {
+        result2 = await userRoleCollection.insertOne(insert)
+      }
 
       res.send(result2);
     });
@@ -949,8 +954,7 @@ async function run() {
 
     app.get('/status', verifyToken, async (req, res) => {
       const email = req.query.email;
-      const result = await userCollection.aggregate([
-        {
+      const result = await userCollection.aggregate([{
           $match: {
             email: email
           }
@@ -979,7 +983,9 @@ async function run() {
     app.post('/teacherRequest', verifyToken, async (req, res) => {
       const request = req.body;
       const email = req.query.email;
-      const user = await userCollection.findOne({email: email});
+      const user = await userCollection.findOne({
+        email: email
+      });
       const teacherRequest = {
         userId: user._id,
         experience: request.experience,
@@ -988,6 +994,24 @@ async function run() {
         status: request.status,
       };
       const result = await teacherRequestCollection.insertOne(teacherRequest);
+      res.send(result);
+    });
+
+    app.patch('/anotherTeacherRequest', verifyToken, async (req, res) => {
+      const status = req.body.status;
+      const email = req.query.email;
+      const user = await userCollection.findOne({email: email});
+      const query = {
+        userId: user._id
+      };
+
+      const update = {
+        $set: {
+          status: status
+        }
+      };
+
+      const result = await teacherRequestCollection.updateOne(query, update);
       res.send(result);
     });
 
