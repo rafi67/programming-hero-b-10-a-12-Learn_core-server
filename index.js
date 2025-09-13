@@ -947,6 +947,35 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/status', verifyToken, async (req, res) => {
+      const email = req.query.email;
+      const result = await userCollection.aggregate([
+        {
+          $match: {
+            email: email
+          }
+        },
+        {
+          $lookup: {
+            from: 'teacherRequest',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'teacherRequest'
+          }
+        },
+        {
+          $unwind: '$teacherRequest'
+        },
+        {
+          $project: {
+            _id: 1,
+            status: '$teacherRequest.status'
+          }
+        }
+      ]).toArray();
+      res.send(result)
+    });
+
     app.post('/teacherRequest', verifyToken, async (req, res) => {
       const request = req.body;
       const email = req.query.email;
