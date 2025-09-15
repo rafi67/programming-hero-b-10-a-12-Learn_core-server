@@ -1000,7 +1000,9 @@ async function run() {
     app.patch('/anotherTeacherRequest', verifyToken, async (req, res) => {
       const status = req.body.status;
       const email = req.query.email;
-      const user = await userCollection.findOne({email: email});
+      const user = await userCollection.findOne({
+        email: email
+      });
       const query = {
         userId: user._id
       };
