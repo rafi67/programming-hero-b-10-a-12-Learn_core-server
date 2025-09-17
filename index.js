@@ -1062,6 +1062,50 @@ async function run() {
     });
 
     // payment api
+    app.get('/myOrder', verifyToken, verifyStudent, async (req, res) => {
+      const userId = req.userId;
+      const result = await paymentCollection.aggregate([
+        {
+          $match: {
+            userId: userId
+          }
+        },
+        {
+          $lookup: {
+            from: 'class',
+            localField: 'classId',
+            foreignField: '_id',
+            as: 'Class'
+          }
+        },
+        {
+          $unwind: '$Class'
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'Class.teacherId',
+            foreignField: '_id',
+            as: 'Teacher'
+          }
+        },
+        {
+          $unwind: '$Teacher'
+        },
+        {
+          $project: {
+            _id: 1,
+            title: '$Class.title',
+            price:'$Class.price',
+            transactionId: 1,
+            email: 1,
+            teacherEmail: '$Teacher.email'
+          }
+        },
+      ]).toArray();
+      res.send(result);
+    });
+
     app.post('/create-payment-intent', verifyToken, async (req, res) => {
       const {
         price
