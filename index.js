@@ -422,36 +422,74 @@ async function run() {
     });
 
     app.get('/allClasses', async (req, res) => {
-      const result = await classCollection.aggregate([{
-          $match: {
-            status: 'accepted'
+      const search = req.query.search;
+      if (search) {
+        const result = await classCollection.aggregate([{
+            $match: {
+              status: 'accepted',
+              title: {
+                $regex: search,
+                $options: 'i'
+              }
+            }
+          },
+          {
+            $lookup: {
+              from: 'user',
+              localField: 'teacherId',
+              foreignField: '_id',
+              as: 'teacher'
+            }
+          },
+          {
+            $unwind: '$teacher'
+          },
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              name: '$teacher.name',
+              price: 1,
+              imageUrl: 1,
+              description: 1,
+              totalEnrollment: 1,
+              status: 1
+            }
           }
-        },
-        {
-          $lookup: {
-            from: 'user',
-            localField: 'teacherId',
-            foreignField: '_id',
-            as: 'teacher'
+        ]).toArray();
+        res.send(result);
+      } else {
+        const result = await classCollection.aggregate([{
+            $match: {
+              status: 'accepted'
+            }
+          },
+          {
+            $lookup: {
+              from: 'user',
+              localField: 'teacherId',
+              foreignField: '_id',
+              as: 'teacher'
+            }
+          },
+          {
+            $unwind: '$teacher'
+          },
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              name: '$teacher.name',
+              price: 1,
+              imageUrl: 1,
+              description: 1,
+              totalEnrollment: 1,
+              status: 1
+            }
           }
-        },
-        {
-          $unwind: '$teacher'
-        },
-        {
-          $project: {
-            _id: 1,
-            title: 1,
-            name: '$teacher.name',
-            price: 1,
-            imageUrl: 1,
-            description: 1,
-            totalEnrollment: 1,
-            status: 1
-          }
-        }
-      ]).toArray();
-      res.send(result);
+        ]).toArray();
+        res.send(result);
+      }
     });
 
     app.get('/myClass', verifyToken, verifyTeacher, async (req, res) => {
@@ -1064,8 +1102,7 @@ async function run() {
     // payment api
     app.get('/myOrder', verifyToken, verifyStudent, async (req, res) => {
       const userId = req.userId;
-      const result = await paymentCollection.aggregate([
-        {
+      const result = await paymentCollection.aggregate([{
           $match: {
             userId: userId
           }
@@ -1096,7 +1133,7 @@ async function run() {
           $project: {
             _id: 1,
             title: '$Class.title',
-            price:'$Class.price',
+            price: '$Class.price',
             transactionId: 1,
             email: 1,
             teacherEmail: '$Teacher.email'
