@@ -228,20 +228,14 @@ async function run() {
     app.patch('/makeAdmin', verifyToken, verifyAdmin, async (req, res) => {
       const userId = new ObjectId(req.query.userId);
       const query = {
-        _id: userId
+        userId: userId
       };
       const update = {
         $set: {
           role: 'admin'
         }
       };
-      let result = await userRoleCollection.updateOne(query, update);
-      if (result.upsertedId == null) {
-        result = await userRoleCollection.insertOne({
-          userId: userId,
-          role: "admin"
-        })
-      }
+      const result = await userRoleCollection.updateOne(query, update);
       res.send(result);
     });
 
@@ -274,21 +268,6 @@ async function run() {
 
     app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
-      res.send(result);
-    });
-
-    app.patch('/makeAdmin/:id', verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = {
-        userId: new ObjectId(id)
-      };
-
-      const updateDocument = {
-        $set: {
-          role: 'admin'
-        }
-      };
-      const result = await userRoleCollection.updateOne(filter, updateDocument);
       res.send(result);
     });
 
@@ -369,55 +348,6 @@ async function run() {
           totalEnrollment: -1,
         }
       }]).limit(6).toArray();
-      res.send(result);
-    });
-
-    app.get('/class/:id', async (req, res) => {
-      const id = req.params.id;
-      const result = await classCollection.aggregate([{
-          $match: {
-            _id: new ObjectId(id)
-          }
-        },
-        {
-          $lookup: {
-            from: 'user',
-            localField: 'teacherId',
-            foreignField: '_id',
-            as: 'teacher',
-          }
-        },
-        {
-          $unwind: '$teacher'
-        },
-        {
-          $lookup: {
-            from: 'enrollClass',
-            localField: '_id',
-            foreignField: 'classId',
-            as: 'classEnrollment',
-          }
-        },
-        {
-          $addFields: {
-            totalStudent: {
-              $size: '$classEnrollment'
-            }
-          }
-        },
-        {
-          $project: {
-            _id: 1,
-            teacherName: '$teacher.name',
-            teacherPhoto: '$teacher.photoUrl',
-            totalStudent: 1,
-            price: 1,
-            description: 1,
-            imageUrl: 1,
-            totalEnrollment: 1,
-          },
-        }
-      ]).toArray();
       res.send(result);
     });
 
