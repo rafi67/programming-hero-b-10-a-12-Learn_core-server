@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
+const nodemailer = require("nodemailer");
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_SK);
 const port = 5000;
@@ -10,6 +11,15 @@ const port = 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// email transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: `${process.env.EMAIL_ADDRESS}`,
+    pass: `${process.env.EMAIL_PASS}`,
+  },
+});
 
 // security middleware
 const verifyToken = (req, res, next) => {
@@ -179,6 +189,89 @@ async function run() {
       res.send({
         token
       });
+    });
+
+    // send-payment-email api
+    app.get('/send-payment-email', verifyToken, verifyStudent, async (req, res) => {
+      const paymentId = new ObjectId(req.query.paymentId);
+      
+      const result = await paymentCollection.aggregate([
+        {
+          $match: {
+            _id: paymentId,
+          }
+        },
+        {
+          $lookup: {
+            from: 'class',
+            localField: 'classId',
+            foreignField: '_id',
+            as: 'Class',
+          }
+        },
+        {
+          $unwind: '$Class',
+        },
+        {
+          $lookup: {
+            from: 'user',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'User'
+          }
+        },
+        {
+          $unwind: '$User'
+        },
+        {
+          $project: {
+            _id: 1,
+            transactionId: 1,
+            price: 1,
+            user: '$User.name',
+            classTitle: '$Class.title'
+          }
+        }
+      ]).toArray();
+
+      const paymentInfo = {
+        transactionId: result[0].transactionId,
+        user: result[0].name,
+        courseTitle: result[0].classTitle,
+        price: result[0].price,
+      };
+
+      const emailObj = {
+        from: `"learnCore email sender" ${process.env.EMAIL_ADDRESS}`,
+        to: `${req.query.email}`,
+        subject: 'payment confirmation',
+        html: `
+        <p>Thank you for the payment. We have received your payment.</p>
+        <br/>
+        <br/>
+        <h3>Transaction Id: ${paymentInfo.transactionId}</h3>
+        <br/>
+        <br/>
+        <p>If you face any issue, please reply to this email address</p>
+        <button>Click Here</button>
+        <br/>
+        <br/>
+        <p>Class: ${paymentInfo.courseTitle}</p>
+        <p>Price: ${paymentInfo.price}</p>
+        `,
+      };
+
+      try {
+        const emailInfo = await transporter.sendMail(emailObj);
+        res.status(200).send({
+          message: 'successfully done',
+          messageId: emailInfo.messageId
+        });
+      } catch (err) {
+        res.status(500).send({
+          message: err.message,
+        });
+      }
     });
 
     // user api
@@ -1106,7 +1199,7 @@ async function run() {
         transactionId: payment.transactionId,
         classId: new ObjectId(payment.classId),
       }
-      await paymentCollection.insertOne(paymentInfo);
+      const paymentData = await paymentCollection.insertOne(paymentInfo);
 
       // store role data
       const doc = {
@@ -1147,10 +1240,8 @@ async function run() {
       };
 
       await classCollection.updateOne(query, updateDoc);
-
-      res.send({
-        message: 'success'
-      });
+      
+      res.send(paymentData);
     });
 
     app.get('/verifyPayment', async (req, res) => {
