@@ -3,6 +3,9 @@ const app = express();
 const cors = require('cors');
 require('dotenv').config();
 const nodemailer = require("nodemailer");
+const {
+  default: axios
+} = require('axios');
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_SK);
 const port = 5000;
@@ -11,6 +14,7 @@ const port = 5000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded());
 
 // email transporter
 const transporter = nodemailer.createTransport({
@@ -192,11 +196,10 @@ async function run() {
     });
 
     // send-payment-email api
-    app.get('/send-payment-email', verifyToken, verifyStudent, async (req, res) => {
+    app.get('/send-payment-email', verifyToken, async (req, res) => {
       const paymentId = new ObjectId(req.query.paymentId);
-      
-      const result = await paymentCollection.aggregate([
-        {
+
+      const result = await paymentCollection.aggregate([{
           $match: {
             _id: paymentId,
           }
@@ -1191,6 +1194,7 @@ async function run() {
       const user = await userCollection.findOne(qry);
 
       // storing payment data
+
       const paymentInfo = {
         userId: user._id,
         email: payment.email,
@@ -1240,11 +1244,30 @@ async function run() {
       };
 
       await classCollection.updateOne(query, updateDoc);
-      
+
       res.send(paymentData);
     });
 
-    app.get('/verifyPayment', async (req, res) => {
+    app.post('/success-payment/:email/:classId', async (req, res) => {
+      const paymentSuccess = req.body;
+      const email = req.params.email;
+      const classId = req.params.classId;
+      const user = await userCollection.findOne({email: email});
+      const paymentInfo = {
+        userId: user._id,
+        email: email,
+        price: paymentSuccess.amount,
+        date: paymentSuccess.tran_date,
+        transactionId: paymentSuccess.tran_id,
+        classId: new ObjectId(classId),
+      }
+
+      const query = encodeURIComponent(JSON.stringify(paymentInfo));
+
+      res.redirect(`${process.env.SUCCESS_LOCAL_CLIENT_URL}?data=${query}`);
+    });
+
+    app.get('/verifyPayment', verifyToken, async (req, res) => {
       const email = req.query.email;
       const classId = req.query.classId;
 
@@ -1262,6 +1285,60 @@ async function run() {
       }
       res.send({
         isPaid: false
+      });
+    });
+
+    app.post('/create-ssl-payment', verifyToken, async (req, res) => {
+      const paymentInfo = req.body;
+
+      const transactionId = new ObjectId().toString();
+
+      const initiate = {
+        store_id: `${process.env.STORE_ID}`,
+        store_passwd: `${process.env.STORE_PASS}`,
+        total_amount: paymentInfo.price,
+        currency: 'BDT',
+        tran_id: transactionId, // use unique tran_id for each api call
+        success_url: `${process.env.SUCCESS_LOCAL_URL}/${paymentInfo.email}/${paymentInfo.classId}`,
+        fail_url: `${process.env.FAIL_LOCAL_URL}`,
+        cancel_url: `${process.env.CANCEL_LOCAL_URL}`,
+        ipn_url: `${process.env.IPN_LOCAL_URL}`,
+        shipping_method: 'Courier',
+        product_name: `Online Course: ${paymentInfo.title}`,
+        product_category: 'Education',
+        product_profile: 'general',
+        cus_name: `${paymentInfo.name}`,
+        cus_email: `${req.query.email}`,
+        cus_add1: 'Dhaka',
+        cus_add2: 'Dhaka',
+        cus_city: 'Dhaka',
+        cus_state: 'Dhaka',
+        cus_postcode: '1000',
+        cus_country: 'Bangladesh',
+        cus_phone: '01711111111',
+        cus_fax: '01711111111',
+        ship_name: `${req.query.name}`,
+        ship_add1: 'Dhaka',
+        ship_add2: 'Dhaka',
+        ship_city: 'Dhaka',
+        ship_state: 'Dhaka',
+        ship_postcode: 1000,
+        ship_country: 'Bangladesh',
+      };
+
+      const iniResponse = await axios({
+        url: `${process.env.INITIATE_PAYMENT_URL}`,
+        method: 'POST',
+        data: initiate,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+
+      const gatewayUrl = iniResponse?.data?.GatewayPageURL;
+
+      res.send({
+        gatewayUrl
       });
     });
 
