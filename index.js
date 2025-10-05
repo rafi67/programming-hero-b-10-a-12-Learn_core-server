@@ -1252,7 +1252,9 @@ async function run() {
       const paymentSuccess = req.body;
       const email = req.params.email;
       const classId = req.params.classId;
-      const user = await userCollection.findOne({email: email});
+      const user = await userCollection.findOne({
+        email: email
+      });
       const paymentInfo = {
         userId: user._id,
         email: email,
@@ -1262,9 +1264,48 @@ async function run() {
         classId: new ObjectId(classId),
       }
 
-      const query = encodeURIComponent(JSON.stringify(paymentInfo));
+      const result = await paymentCollection.insertOne(paymentInfo);
 
-      res.redirect(`${process.env.SUCCESS_LOCAL_CLIENT_URL}?data=${query}`);
+      const doc = {
+        userId: new ObjectId(user._id),
+        role: 'student'
+      };
+
+      const roleQuery = {
+        userId: doc.userId
+      };
+
+      const Role = await userRoleCollection.findOne(roleQuery);
+
+      // if no role exists then store the role data
+      if (!Role) {
+        await userRoleCollection.insertOne(doc);
+      }
+
+      const Class = await classCollection.findOne({
+        _id: paymentInfo.classId,
+      });
+
+      const enroll = {
+        classId: paymentInfo.classId,
+        teacherId: Class.teacherId,
+        studentId: user._id
+      };
+
+      await enrollClassCollection.insertOne(enroll);
+      const query = {
+        _id: Class._id
+      };
+
+      const updateDoc = {
+        $set: {
+          totalEnrollment: Class.totalEnrollment + 1
+        }
+      };
+
+      await classCollection.updateOne(query, updateDoc);
+
+      res.redirect(`${process.env.SUCCESS_LOCAL_CLIENT_URL}/${result.insertedId}`);
     });
 
     app.get('/verifyPayment', verifyToken, async (req, res) => {
