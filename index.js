@@ -1371,7 +1371,7 @@ async function run() {
         success_url: `${process.env.SUCCESS_LOCAL_URL}/${paymentInfo.email}/${paymentInfo.classId}`,
         fail_url: `${process.env.FAIL_LOCAL_URL}`,
         cancel_url: `${process.env.CANCEL_LOCAL_URL}`,
-        ipn_url: `${process.env.IPN_LOCAL_URL}`,
+        ipn_url: `${process.env.SUCCESS_LOCAL_URL}/${paymentInfo.email}/${paymentInfo.classId}`,
         shipping_method: 'Courier',
         product_name: `Online Course: ${paymentInfo.title}`,
         product_category: 'Education',
