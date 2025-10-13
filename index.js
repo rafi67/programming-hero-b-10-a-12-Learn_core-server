@@ -1264,7 +1264,7 @@ async function run() {
         classId: new ObjectId(classId),
       }
 
-      const result = await paymentCollection.insertOne(paymentInfo);
+      await paymentCollection.insertOne(paymentInfo);
 
       const doc = {
         userId: new ObjectId(user._id),
@@ -1305,7 +1305,35 @@ async function run() {
 
       await classCollection.updateOne(query, updateDoc);
 
-      res.redirect(`${process.env.SUCCESS_LOCAL_CLIENT_URL}/${result.insertedId}`);
+      const emailObj = {
+        from: `"learnCore email sender" ${process.env.EMAIL_ADDRESS}`,
+        to: `${paymentInfo.email}`,
+        subject: 'payment confirmation',
+        html: `
+        <p>Thank you for the payment. We have received your payment.</p>
+        <br/>
+        <br/>
+        <h3>Transaction Id: ${paymentInfo.transactionId}</h3>
+        <br/>
+        <br/>
+        <p>If you face any issue, please reply to this email address</p>
+        <button>Click Here</button>
+        <br/>
+        <br/>
+        <p>Class: ${Class.title}</p>
+        <p>Price: ${paymentInfo.price}</p>
+        `,
+      };
+
+      try {
+        await transporter.sendMail(emailObj);
+      } catch (err) {
+        // res.status(500).send({
+        //   message: err.message,
+        // });
+      }
+
+      res.redirect(`${process.env.SUCCESS_LOCAL_CLIENT_URL}`);
     });
 
     app.get('/verifyPayment', verifyToken, async (req, res) => {
